@@ -3,9 +3,10 @@ import os
 import ftplib
 import socks
 
+
 def log(text):
     print(text)
-    #TODO реализовать человеческое логирование
+    # TODO реализовать человеческое логирование
 
 
 def getparamsfromstring(line):
@@ -104,15 +105,24 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     fordelfileslist=[]
     files=[]
-    FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
+    FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
+    FtpConnect.encoding='cp1251'
     if not(FTPDir==''):
             FtpConnect.cwd(FTPDir)
-    FtpConnect.retrlines('LIST', files.append)
-    log(files)
+    files=FtpConnect.nlst()
+    for i in range(0,len(files)):
+        filename=files[i]
+        tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
 
-
-
-    #TODO реализовать получение
+        #Проверяем не является ли файл папкой
+        isfolder=1
+        try:
+            FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
+            FtpConnect.cwd(FTPDir)
+        except:
+            isfolder=0
+        #TODO реализовать получение
+        log(filename+' | '+str(isfolder))
     log('Получение файлов еще не реалзиовано.')
 
 def processline(params):
@@ -126,6 +136,7 @@ def processline(params):
     SigText=params[7]
 
     #В зависимости от метода передачи получим или отправим файлы
+    #TODO в дальнейшем можно добавить сжатие
     if int(FTPMethod)==0: #Отправка файлов
         sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
     elif FTPMethod==1: #Получение файлов
