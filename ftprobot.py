@@ -3,13 +3,6 @@ import os
 import ftplib
 import socks
 
-class Cp1251FTP(ftplib.FTP):
-   def putline(self, line):
-        line = line + '\r\n'
-        if self.debugging > 1:
-            print('*put*', self.sanitize(line))
-        self.sock.sendall(line.encode('cp1251'))
-
 def log(text):
     print(text)
     #TODO реализовать человеческое логирование
@@ -55,6 +48,8 @@ def removefiles(filelist):
                 log('Файл "'+curfile+'" успешно удален.')
             else:
                 log('Ошибка удаления файла "'+curfile+'".')
+    else:
+        log('Список файлов на удаление пуст.')
     log('*********************************************')
 
 def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
@@ -68,29 +63,37 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         fordelfileslist=[]
 
         #Создаем подключение
-        FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
-        if not(FTPDir==''):
-            FtpConnect.cwd(FTPDir)
-        for i in range(0, countfiles):
-            curfile=files[i]
-            curfullfile=localDir+'\\'+curfile
-            log('Отправляем "'+str(curfullfile)+'"')
-            sendfileFTP = open(curfullfile,'rb')
-            success=1
-            try:
-                FtpConnect.storbinary('STOR '+curfile, sendfileFTP)
-            except:
-                success=0
-            sendfileFTP=''
+        success=1
+        try:
+            # FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
+            FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
+            FtpConnect.encoding='cp1251'
+        except:
+            log('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.')
+            success=0
 
-            if success==1:
-                # Если файл был успешно передан - добавим файлы в список удаляемых
-                # (#TODO в будующем необходимо реализовать перенос в архив в соответствии с конфигом)
-                log('Файл "'+curfile+'" успешно отправлен.')
-                fordelfileslist.append(curfullfile)
-            else:
-                log('Ошибка отправки файла "'+curfile+'"!')
-        FtpConnect.close()
+        if success==1:
+            if not(FTPDir==''):
+                FtpConnect.cwd(FTPDir)
+            for i in range(0, countfiles):
+                curfile=files[i]
+                curfullfile=localDir+'\\'+curfile
+                log('Отправляем "'+str(curfullfile)+'"')
+                sendfileFTP = open(curfullfile,'rb')
+                try:
+                    FtpConnect.storbinary('STOR '+curfile, sendfileFTP)
+                except:
+                    success=0
+                sendfileFTP=''
+
+                if success==1:
+                    # Если файл был успешно передан - добавим файлы в список удаляемых
+                    # (#TODO в будующем необходимо реализовать перенос в архив в соответствии с конфигом)
+                    log('Файл "'+curfile+'" успешно отправлен.')
+                    fordelfileslist.append(curfullfile)
+                else:
+                    log('Ошибка отправки файла "'+curfile+'"!')
+            FtpConnect.close()
         FtpConnect=''
         log('*********************************************')
 
@@ -99,6 +102,16 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         log('Файлов в каталоге "'+localDir+'" не найдено.')
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
+    fordelfileslist=[]
+    files=[]
+    FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
+    if not(FTPDir==''):
+            FtpConnect.cwd(FTPDir)
+    FtpConnect.retrlines('LIST', files.append)
+    log(files)
+
+
+
     #TODO реализовать получение
     log('Получение файлов еще не реалзиовано.')
 
@@ -109,7 +122,7 @@ def processline(params):
     FTPDir=params[3]
     FTPLogin=params[4] #Логин и пароль пока храним в открытом виде,
     FTPPass=params[5] #позже добавим шифрование
-    FTPMethod=params[6]
+    FTPMethod=int(params[6])
     SigText=params[7]
 
     #В зависимости от метода передачи получим или отправим файлы
@@ -117,6 +130,8 @@ def processline(params):
         sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
     elif FTPMethod==1: #Получение файлов
         getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
+    #TODO добавить генерацию sig файла
+
 
 def initial():
     global pathtoscript
