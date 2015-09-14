@@ -89,7 +89,7 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
 
                 if success==1:
                     # Если файл был успешно передан - добавим файлы в список удаляемых
-                    # (#TODO в будующем необходимо реализовать перенос в архив в соответствии с конфигом)
+                    # (#TODO в будущем необходимо реализовать перенос в архив в соответствии с конфигом)
                     log('Файл "'+curfile+'" успешно отправлен.')
                     fordelfileslist.append(curfullfile)
                 else:
@@ -103,26 +103,38 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         log('Файлов в каталоге "'+localDir+'" не найдено.')
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
-    fordelfileslist=[]
+
     FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
     FtpConnect.encoding='cp1251'
     if not(FTPDir==''):
-            FtpConnect.cwd(FTPDir)
-    files=FtpConnect.nlst()
-    for i in range(0,len(files)):
-        filename=files[i]
-        tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
+        remotefiles=[]
+        FtpConnect.cwd(FTPDir)
+        files=FtpConnect.nlst()
+        for i in range(0,len(files)):
+            filename=files[i]
+            tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
 
-        #Проверяем не является ли файл папкой
-        isfolder=1
-        try:
-            FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
-            FtpConnect.cwd(FTPDir)
-        except:
-            isfolder=0
-        #TODO реализовать получение
-        log(filename+' | '+str(isfolder))
+            #Проверяем не является ли файл папкой
+            isfolder=1
+            try:
+                FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
+                FtpConnect.cwd(FTPDir)
+            except:
+                isfolder=0
+            if isfolder==0: # Это файл, добавляем в список для получения
+                log('Добавляем файл "'+filename+'" в список для получения')
+                remotefiles.append(filename)
+        if len(remotefiles)>0:
+            log('Начинаем получение файлов из списка: ')
+            log(remotefiles)
+            fordelfileslist=[]
+
+            #TODO реализовать получение
+    FtpConnect.close()
+    FtpConnect=''
     log('Получение файлов еще не реалзиовано.')
+    log('*********************************************')
+
 
 def processline(params):
     localDir=params[0]
