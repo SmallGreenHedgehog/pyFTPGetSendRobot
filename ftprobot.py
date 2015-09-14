@@ -104,7 +104,6 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     fordelfileslist=[]
-    files=[]
     FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
     FtpConnect.encoding='cp1251'
     if not(FTPDir==''):
