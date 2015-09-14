@@ -96,6 +96,7 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
                     log('Ошибка отправки файла "'+curfile+'"!')
             FtpConnect.close()
         FtpConnect=''
+        log('Отправка файлов завершена.')
         log('*********************************************')
 
         removefiles(fordelfileslist)
@@ -103,33 +104,62 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         log('Файлов в каталоге "'+localDir+'" не найдено.')
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
+    log('*********************************************')
+    log('Получение файлов:')
 
-    FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
-    FtpConnect.encoding='cp1251'
-    if not(FTPDir==''):
-        remotefiles=[]
-        FtpConnect.cwd(FTPDir)
-        files=FtpConnect.nlst()
-        for i in range(0,len(files)):
-            filename=files[i]
-            tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
+    success=1
+    try:
+        FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
+        FtpConnect.encoding='cp1251'
+    except:
+        log('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.')
+        success=0
+    if success==1:
+        if not(FTPDir==''):
+            remotefiles=[]
+            FtpConnect.cwd(FTPDir)
+            files=FtpConnect.nlst()
+            for i in range(0,len(files)):
+                filename=files[i]
+                tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
 
-            #Проверяем не является ли файл папкой
-            isfolder=1
-            try:
-                FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
-                FtpConnect.cwd(FTPDir)
-            except:
-                isfolder=0
-            if isfolder==0: # Это файл, добавляем в список для получения
-                log('Добавляем файл "'+filename+'" в список для получения')
-                remotefiles.append(filename)
-        if len(remotefiles)>0:
-            log('Начинаем получение файлов из списка: ')
-            log(remotefiles)
-            fordelfileslist=[]
+                #Проверяем не является ли файл папкой
+                isfolder=1
+                try:
+                    FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
+                    FtpConnect.cwd(FTPDir)
+                except:
+                    isfolder=0
+                if isfolder==0: # Это файл, добавляем в список для получения
+                    log('Добавляем файл "'+filename+'" в список для получения')
+                    remotefiles.append(filename)
 
-            #TODO реализовать получение
+            countfiles=len(remotefiles)
+            if countfiles>0:
+                log('*********************************************')
+                log('Получение файлов:')
+                log(remotefiles)
+                fordelfileslist=[]
+
+                for i in range(0, countfiles):
+                    success=1
+                    curfile=remotefiles[i]
+                    curfullfile=localDir+'\\'+curfile
+                    log('Получаем "'+str(curfile)+'" в "'+curfullfile+'"')
+                    getfileFTP = open(curfullfile,'wb')
+                    try:
+                        FtpConnect.retrbinary('RETR %s' % curfile, getfileFTP.write)
+                    except:
+                        success=0
+                    if success==1:
+                        log('Файл "'+curfile+'" успешно получен.')
+                        fordelfileslist.append(curfile)
+                    else:
+                        log('Ошибка получения файла "'+curfile+'"')
+
+
+
+                #TODO реализовать получение
     FtpConnect.close()
     FtpConnect=''
     log('Получение файлов еще не реалзиовано.')
