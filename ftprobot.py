@@ -32,7 +32,7 @@ def getlinesfromconfig():
     return conflines
 
 def removefiles(filelist):
-    log('*********************************************')
+    log('---------------------------------------------')
     log('Удаление файлов:')
 
     countdelfiles=len(filelist)
@@ -51,7 +51,7 @@ def removefiles(filelist):
                 log('Ошибка удаления файла "'+curfile+'".')
     else:
         log('Список файлов на удаление пуст.')
-    log('*********************************************')
+    log('---------------------------------------------')
 
 def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     #Сначала проверим есть ли файлы в указанной директории
@@ -74,7 +74,10 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
             success=0
 
         if success==1:
+            log('Соединение с FTP сервером успешно установлено.')
             if not(FTPDir==''):
+                log('Переходим в указанную директорию ('+FTPDir+')')
+                #TODO добавить создание директории, если отсутствует
                 FtpConnect.cwd(FTPDir)
             for i in range(0, countfiles):
                 curfile=files[i]
@@ -89,24 +92,22 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
 
                 if success==1:
                     # Если файл был успешно передан - добавим файлы в список удаляемых
-                    # (#TODO в будущем необходимо реализовать перенос в архив в соответствии с конфигом)
+                    #TODO в будущем необходимо реализовать перенос в архив в соответствии с конфигом
                     log('Файл "'+curfile+'" успешно отправлен.')
                     fordelfileslist.append(curfullfile)
                 else:
                     log('Ошибка отправки файла "'+curfile+'"!')
             FtpConnect.close()
         FtpConnect=''
+        removefiles(fordelfileslist)
         log('Отправка файлов завершена.')
         log('*********************************************')
-
-        removefiles(fordelfileslist)
     else:
         log('Файлов в каталоге "'+localDir+'" не найдено.')
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     log('*********************************************')
     log('Получение файлов:')
-
     success=1
     try:
         FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
@@ -115,56 +116,73 @@ def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         log('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.')
         success=0
     if success==1:
+        log('Соединение с FTP сервером успешно установлено.')
+        remotefiles=[]
         if not(FTPDir==''):
-            remotefiles=[]
+            log('Переходим в указанную директорию ('+FTPDir+')')
             FtpConnect.cwd(FTPDir)
-            files=FtpConnect.nlst()
-            for i in range(0,len(files)):
-                filename=files[i]
-                tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
 
-                #Проверяем не является ли файл папкой
-                isfolder=1
+        log('Получаем список файлов (без поддиректорий)')
+        files=FtpConnect.nlst()
+        for i in range(0,len(files)):
+            filename=files[i]
+            tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
+
+            #Проверяем не является ли файл папкой
+            isfolder=1
+            try:
+                FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
+                FtpConnect.cwd(FTPDir)
+            except:
+                isfolder=0
+            if isfolder==0: # Это файл, добавляем в список для получения
+                log('Добавляем файл "'+filename+'" в список для получения')
+                remotefiles.append(filename)
+
+        countfiles=len(remotefiles)
+        if countfiles>0:
+            fordelfileslist=[]
+
+            for i in range(0, countfiles):
+                success=1
+                curfile=remotefiles[i]
+                curfullfile=localDir+'\\'+curfile
+                log('Получаем "'+str(curfile)+'" в "'+curfullfile+'"')
+                getfileFTP = open(curfullfile,'wb')
                 try:
-                    FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
-                    FtpConnect.cwd(FTPDir)
+                    FtpConnect.retrbinary('RETR %s' % curfile, getfileFTP.write)
                 except:
-                    isfolder=0
-                if isfolder==0: # Это файл, добавляем в список для получения
-                    log('Добавляем файл "'+filename+'" в список для получения')
-                    remotefiles.append(filename)
-
-            countfiles=len(remotefiles)
+                    success=0
+                if success==1:
+                    log('Файл "'+curfile+'" успешно получен.')
+                    fordelfileslist.append(curfile)
+                else:
+                    log('Ошибка получения файла "'+curfile+'"')
+                getfileFTP=''
+            log('---------------------------------------------')
+            log('Удаляем полученные файлы с FTP')
+            countfiles=len(fordelfileslist)
             if countfiles>0:
-                log('*********************************************')
-                log('Получение файлов:')
-                log(remotefiles)
-                fordelfileslist=[]
-
                 for i in range(0, countfiles):
+                    curfile=fordelfileslist[i]
                     success=1
-                    curfile=remotefiles[i]
-                    curfullfile=localDir+'\\'+curfile
-                    log('Получаем "'+str(curfile)+'" в "'+curfullfile+'"')
-                    getfileFTP = open(curfullfile,'wb')
                     try:
-                        FtpConnect.retrbinary('RETR %s' % curfile, getfileFTP.write)
-                    except:
+                        FtpConnect.delete(curfile)
+                    except NameError:
                         success=0
                     if success==1:
-                        log('Файл "'+curfile+'" успешно получен.')
-                        fordelfileslist.append(curfile)
+                        log('Файл "'+curfile+'" успешно удален с FTP сервера')
                     else:
-                        log('Ошибка получения файла "'+curfile+'"')
-
-
-
-                #TODO реализовать получение
+                        log('Ошибка удаления файла "'+curfile+'" c FTP сервера')
+            else:
+                log('Нет файлов на удаление с FTP')
+            log('---------------------------------------------')
+        else:
+            log('Нет файлов в указанной директории')
     FtpConnect.close()
     FtpConnect=''
-    log('Получение файлов еще не реалзиовано.')
+    log('Получение файлов завершено.')
     log('*********************************************')
-
 
 def processline(params):
     localDir=params[0]
