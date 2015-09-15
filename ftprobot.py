@@ -214,10 +214,9 @@ def initial():
     global log
 
     log=Jlog()
-    log.maxfilesizeMB=5
-    log.logfilename='ftprobot'
-    log.needprinttext=True
-
+    log.setmaxfilesizeMB(5)
+    log.setneedprinttext(True)
+    log.setlogfilename('ftprobot.log')
 
     log.message('')
     log.message('START SCRIPT')
