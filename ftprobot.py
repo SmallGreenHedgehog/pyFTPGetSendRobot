@@ -2,12 +2,7 @@
 import os
 import ftplib
 import socks
-
-
-def log(text):
-    print(text)
-    # TODO реализовать человеческое логирование
-
+from jillmodule import Jlog
 
 def getparamsfromstring(line):
     params=[]
@@ -17,7 +12,6 @@ def getparamsfromstring(line):
     while (i<lenline) and not(line[i]=='\n'):
         sym=line[i]
         if sym==';':
-            # log(par)
             params.append(par)
             par=''
         else:
@@ -32,26 +26,26 @@ def getlinesfromconfig():
     return conflines
 
 def removefiles(filelist):
-    log('---------------------------------------------')
-    log('Удаление файлов:')
+    log.message('---------------------------------------------')
+    log.message('Удаление файлов:')
 
     countdelfiles=len(filelist)
     if countdelfiles>0:
         for i in range(0,countdelfiles):
             curfile=filelist[i]
-            log('Удаляем файл "'+curfile+'".')
+            log.message('Удаляем файл "'+curfile+'".')
             succes=1
             try:
                 os.remove(curfile)
-            except NameError:
+            except:
                 succes=0
             if succes==1:
-                log('Файл "'+curfile+'" успешно удален.')
+                log.message('Файл "'+curfile+'" успешно удален.')
             else:
-                log('Ошибка удаления файла "'+curfile+'".')
+                log.message('Ошибка удаления файла "'+curfile+'".',0)
     else:
-        log('Список файлов на удаление пуст.')
-    log('---------------------------------------------')
+        log.message('Список файлов на удаление пуст.')
+    log.message('---------------------------------------------')
 
 def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     #Сначала проверим есть ли файлы в указанной директории
@@ -59,8 +53,8 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     countfiles=len(files)
 
     if countfiles>0: #Если есть файлы в директории, то попытаемся их отправить
-        log('*********************************************')
-        log('Отправка файлов:')
+        log.message('*********************************************')
+        log.message('Отправка файлов:')
         fordelfileslist=[]
 
         #Создаем подключение
@@ -70,119 +64,129 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
             FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
             FtpConnect.encoding='cp1251'
         except:
-            log('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.')
+            log.message('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.',0)
             success=0
 
         if success==1:
-            log('Соединение с FTP сервером успешно установлено.')
+            log.message('Соединение с FTP сервером успешно установлено.')
             if not(FTPDir==''):
-                log('Переходим в указанную директорию ('+FTPDir+')')
-                #TODO добавить создание директории, если отсутствует
-                FtpConnect.cwd(FTPDir)
-            for i in range(0, countfiles):
-                curfile=files[i]
-                curfullfile=localDir+'\\'+curfile
-                log('Отправляем "'+str(curfullfile)+'"')
-                sendfileFTP = open(curfullfile,'rb')
+                log.message('Переходим в указанную директорию ('+FTPDir+')')
                 try:
-                    FtpConnect.storbinary('STOR '+curfile, sendfileFTP)
+                    FtpConnect.cwd(FTPDir)
                 except:
                     success=0
-                sendfileFTP=''
+            if success==0:
+                log.message('Указанная директория ('+FTPDir+') не доступна или не существует.',0)
+            else:
+                for i in range(0, countfiles):
+                    curfile=files[i]
+                    curfullfile=localDir+'\\'+curfile
+                    log.message('Отправляем "'+str(curfullfile)+'"')
+                    sendfileFTP = open(curfullfile,'rb')
+                    try:
+                        FtpConnect.storbinary('STOR '+curfile, sendfileFTP)
+                    except:
+                        success=0
+                    sendfileFTP=''
 
-                if success==1:
-                    # Если файл был успешно передан - добавим файлы в список удаляемых
-                    #TODO в будущем необходимо реализовать перенос в архив в соответствии с конфигом
-                    log('Файл "'+curfile+'" успешно отправлен.')
-                    fordelfileslist.append(curfullfile)
-                else:
-                    log('Ошибка отправки файла "'+curfile+'"!')
+                    if success==1:
+                        # Если файл был успешно передан - добавим файлы в список удаляемых
+                        #TODO в будущем необходимо реализовать перенос в архив в соответствии с конфигом
+                        log.message('Файл "'+curfile+'" успешно отправлен.')
+                        fordelfileslist.append(curfullfile)
+                    else:
+                        log.message('Ошибка отправки файла "'+curfile+'"!',0)
             FtpConnect.close()
         FtpConnect=''
         removefiles(fordelfileslist)
-        log('Отправка файлов завершена.')
-        log('*********************************************')
+        log.message('Отправка файлов завершена.')
+        log.message('*********************************************')
     else:
-        log('Файлов в каталоге "'+localDir+'" не найдено.')
+        log.message('Файлов в каталоге "'+localDir+'" не найдено.')
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
-    log('*********************************************')
-    log('Получение файлов:')
+    log.message('*********************************************')
+    log.message('Получение файлов:')
     success=1
     try:
         FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
         FtpConnect.encoding='cp1251'
     except:
-        log('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.')
+        log.message('Ошибка! Соединение с FTP сервером не установлено. Проверьте настройки конфига.',0)
         success=0
     if success==1:
-        log('Соединение с FTP сервером успешно установлено.')
+        log.message('Соединение с FTP сервером успешно установлено.')
         remotefiles=[]
         if not(FTPDir==''):
-            log('Переходим в указанную директорию ('+FTPDir+')')
-            FtpConnect.cwd(FTPDir)
-
-        log('Получаем список файлов (без поддиректорий)')
-        files=FtpConnect.nlst()
-        for i in range(0,len(files)):
-            filename=files[i]
-            tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
-
-            #Проверяем не является ли файл папкой
-            isfolder=1
+            log.message('Переходим в указанную директорию ('+FTPDir+')')
             try:
-                FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
                 FtpConnect.cwd(FTPDir)
             except:
-                isfolder=0
-            if isfolder==0: # Это файл, добавляем в список для получения
-                log('Добавляем файл "'+filename+'" в список для получения')
-                remotefiles.append(filename)
+                success=0
+        if success==0:
+            log.message('Указанная директория ('+FTPDir+') не доступна или не существует.',0)
+        else:
+            log.message('Получаем список файлов (без поддиректорий)')
+            files=FtpConnect.nlst()
+            for i in range(0,len(files)):
+                filename=files[i]
+                tmpfilename=filename.replace('я','Я') #Обходим проблему непонимания маленькой "я" на FTP IIS
 
-        countfiles=len(remotefiles)
-        if countfiles>0:
-            fordelfileslist=[]
-
-            for i in range(0, countfiles):
-                success=1
-                curfile=remotefiles[i]
-                curfullfile=localDir+'\\'+curfile
-                log('Получаем "'+str(curfile)+'" в "'+curfullfile+'"')
-                getfileFTP = open(curfullfile,'wb')
+                #Проверяем не является ли файл папкой
+                isfolder=1
                 try:
-                    FtpConnect.retrbinary('RETR %s' % curfile, getfileFTP.write)
+                    FtpConnect.cwd(FTPDir+'/%s' % tmpfilename)
+                    FtpConnect.cwd(FTPDir)
                 except:
-                    success=0
-                if success==1:
-                    log('Файл "'+curfile+'" успешно получен.')
-                    fordelfileslist.append(curfile)
-                else:
-                    log('Ошибка получения файла "'+curfile+'"')
-                getfileFTP=''
-            log('---------------------------------------------')
-            log('Удаляем полученные файлы с FTP')
-            countfiles=len(fordelfileslist)
+                    isfolder=0
+                if isfolder==0: # Это файл, добавляем в список для получения
+                    log.message('Добавляем файл "'+filename+'" в список для получения')
+                    remotefiles.append(filename)
+
+            countfiles=len(remotefiles)
             if countfiles>0:
+                fordelfileslist=[]
+
                 for i in range(0, countfiles):
-                    curfile=fordelfileslist[i]
                     success=1
+                    curfile=remotefiles[i]
+                    curfullfile=localDir+'\\'+curfile
+                    log.message('Получаем "'+str(curfile)+'" в "'+curfullfile+'"')
+                    getfileFTP = open(curfullfile,'wb')
                     try:
-                        FtpConnect.delete(curfile)
-                    except NameError:
+                        FtpConnect.retrbinary('RETR %s' % curfile, getfileFTP.write)
+                    except:
                         success=0
                     if success==1:
-                        log('Файл "'+curfile+'" успешно удален с FTP сервера')
+                        log.message('Файл "'+curfile+'" успешно получен.')
+                        fordelfileslist.append(curfile)
                     else:
-                        log('Ошибка удаления файла "'+curfile+'" c FTP сервера')
+                        log.message('Ошибка получения файла "'+curfile+'"')
+                    getfileFTP=''
+                log.message('---------------------------------------------')
+                log.message('Удаляем полученные файлы с FTP')
+                countfiles=len(fordelfileslist)
+                if countfiles>0:
+                    for i in range(0, countfiles):
+                        curfile=fordelfileslist[i]
+                        success=1
+                        try:
+                            FtpConnect.delete(curfile)
+                        except:
+                            success=0
+                        if success==1:
+                            log.message('Файл "'+curfile+'" успешно удален с FTP сервера')
+                        else:
+                            log.message('Ошибка удаления файла "'+curfile+'" c FTP сервера')
+                else:
+                    log.message('Нет файлов на удаление с FTP')
+                log.message('---------------------------------------------')
             else:
-                log('Нет файлов на удаление с FTP')
-            log('---------------------------------------------')
-        else:
-            log('Нет файлов в указанной директории')
+                log.message('Нет файлов в указанной директории')
     FtpConnect.close()
     FtpConnect=''
-    log('Получение файлов завершено.')
-    log('*********************************************')
+    log.message('Получение файлов завершено.')
+    log.message('*********************************************')
 
 def processline(params):
     localDir=params[0]
@@ -207,7 +211,16 @@ def initial():
     global pathtoscript
     global conffilepath
     global confproxyfilepath
+    global log
 
+    log=Jlog()
+    log.maxfilesizeMB=5
+    log.logfilename='ftprobot'
+    log.needprinttext=True
+
+
+    log.message('')
+    log.message('START SCRIPT')
     succes=1
     pathtoscript=os.getcwd()
     conffilepath=pathtoscript+'\config.cfg'
@@ -215,10 +228,10 @@ def initial():
 
     if not(os.path.exists(conffilepath)): #Проверяем наличие основного конфига
         succes=0
-        log('Ошибка! Отсутсвует файл "'+conffilepath+'" конфига.')
+        log.message('Ошибка! Отсутсвует файл "'+conffilepath+'" конфига.')
 
     if os.path.exists(confproxyfilepath): #Конфиг прокси существует
-        log('Найден конфиг прокси. Подгружаем параметры.')
+        log.message('Найден конфиг прокси. Подгружаем параметры.')
         correct=1
 
         confproxyfile=open(confproxyfilepath)
@@ -249,12 +262,12 @@ def initial():
             except:
                 succes=0
             if succes==1:
-                log('Работаем через '+proxyType+' прокси ('+proxyHost+':'+proxyPort+').')
+                log.message('Работаем через '+proxyType+' прокси ('+proxyHost+':'+proxyPort+').')
         else:
             succes=0
-            log('Ошибка! Конфиг прокси не корректен!')
+            log.message('Ошибка! Конфиг прокси не корректен!')
     else:
-        log('Конфиг прокси не найден. Работаем с прямым соединением.')
+        log.message('Конфиг прокси не найден. Работаем с прямым соединением.')
     return succes
 
 if initial(): #Инициализация
@@ -270,6 +283,6 @@ if initial(): #Инициализация
             if len(params)>6:
                 processline(params)
             else:
-                log('Недопустимое количество параметров в строке №'+str(i+1)+'!')
+                log.message('Недопустимое количество параметров в строке №'+str(i+1)+'!')
 else:
-    log('Инициализая параметров скрипта не удачна! Проверьте логи и конфигурационные файлы!')
+    log.message('Инициализая параметров скрипта не удачна! Проверьте логи и конфигурационные файлы!')
