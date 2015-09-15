@@ -48,6 +48,8 @@ def removefiles(filelist):
     log.message('---------------------------------------------')
 
 def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
+    success=1
+
     #Сначала проверим есть ли файлы в указанной директории
     files=os.listdir(localDir)
     countfiles=len(files)
@@ -58,7 +60,6 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         fordelfileslist=[]
 
         #Создаем подключение
-        success=1
         try:
             # FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
             FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
@@ -102,7 +103,9 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
         log.message('Отправка файлов завершена.')
         log.message('*********************************************')
     else:
+        success=0
         log.message('Файлов в каталоге "'+localDir+'" не найдено.')
+    return success
 
 def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
     log.message('*********************************************')
@@ -182,11 +185,13 @@ def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
                     log.message('Нет файлов на удаление с FTP')
                 log.message('---------------------------------------------')
             else:
+                success=0
                 log.message('Нет файлов в указанной директории')
     FtpConnect.close()
     FtpConnect=''
     log.message('Получение файлов завершено.')
     log.message('*********************************************')
+    return success
 
 def processline(params):
     localDir=params[0]
@@ -196,16 +201,36 @@ def processline(params):
     FTPLogin=params[4] #Логин и пароль пока храним в открытом виде,
     FTPPass=params[5] #позже добавим шифрование
     FTPMethod=int(params[6])
-    SigText=params[7]
+    SigFilePath=params[7]
+    SigText=params[8]
 
     #В зависимости от метода передачи получим или отправим файлы
     #TODO в дальнейшем можно добавить сжатие
     if int(FTPMethod)==0: #Отправка файлов
-        sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
+        succes=sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
     elif FTPMethod==1: #Получение файлов
-        getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
-    #TODO добавить генерацию sig файла
+        succes=getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass)
 
+    if succes==1: #Если задание выполнено успешно - генерируем сигнальный файл по необходимости
+        if not(SigText==''):
+            log.message('+++++++++++++++++++++++++')
+            log.message('Генерация сигнального файла.')
+            if SigFilePath=='':
+                SigFilePath=pathtoscript+'\mes.sig'
+            succes=1
+            try:
+                sigfile=open(SigFilePath, 'a')
+                sigfile.write(SigText+'\n')
+                sigfile.close()
+                sigfile=''
+            except:
+                succes=0
+            if succes==1:
+                log.message('Сигнальный файл ('+SigFilePath+';'+SigText+') успешно сгенерирован.')
+            else:
+                log.message('Ошибка генерации сигнального файла.',0)
+            log.message('+++++++++++++++++++++++++')
+    #TODO в будущем добавить возможность выполнения скрипта/программы по результатам выполнения задания
 
 def initial():
     global pathtoscript
@@ -219,6 +244,7 @@ def initial():
     log.setlogfilename('ftprobot.log')
 
     log.message('')
+    log.message('====================================')
     log.message('START SCRIPT')
     succes=1
     pathtoscript=os.getcwd()
@@ -279,9 +305,9 @@ if initial(): #Инициализация
             params=getparamsfromstring(line)
 
             #Теперь перезапишем параметры строки в переменные
-            if len(params)>6:
+            if len(params)>7:
                 processline(params)
             else:
-                log.message('Недопустимое количество параметров в строке №'+str(i+1)+'!')
+                log.message('Недопустимое количество параметров в строке №'+str(i+1)+'!',0)
 else:
-    log.message('Инициализая параметров скрипта не удачна! Проверьте логи и конфигурационные файлы!')
+    log.message('Инициализая параметров скрипта не удачна! Проверьте логи и конфигурационные файлы!',0)

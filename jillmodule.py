@@ -22,7 +22,6 @@ class Jlog:
     def setneedprinttext(self, needprinttext=False):
         self.__needprinttext=needprinttext
 
-
     def message(self, text, typemes=1):
         if self.__needprinttext:
             print(text)
