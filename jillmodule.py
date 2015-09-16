@@ -36,3 +36,23 @@ class Jlog:
             logging.info(text)
         else:
             logging.error(text)
+
+class JpassHider:
+    def crypt(self, passwd):
+        encrpasswd=''
+
+        lenthpasswd=len(passwd)
+        if lenthpasswd>0:
+            i=lenthpasswd
+            arraycodepasswd=[]
+            while i>0:
+                arraycodepasswd.append(ord(passwd[i]))
+
+
+
+        return encrpasswd
+
+    def decrypt(self, encrpasswd):
+        passwd=''
+
+        return passwd
