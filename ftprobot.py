@@ -3,6 +3,8 @@ import os
 import ftplib
 import socks
 from jillmodule import Jlog
+from jillmodule import JpassHider
+
 
 def getparamsfromstring(line):
     params=[]
@@ -61,7 +63,6 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
 
         #Создаем подключение
         try:
-            # FtpConnect=Cp1251FTP(FTPHost,FTPLogin,FTPPass)
             FtpConnect=ftplib.FTP(FTPHost,FTPLogin,FTPPass)
             FtpConnect.encoding='cp1251'
         except:
@@ -198,8 +199,15 @@ def processline(params):
     FTPHost=params[1]
     FTPPort=params[2]
     FTPDir=params[3]
-    FTPLogin=params[4] #Логин и пароль пока храним в открытом виде,
-    FTPPass=params[5] #позже добавим шифрование
+    FTPLoginH=params[4]
+    FTPPassH=params[5]
+    if usehideloginpass==1:
+        FTPLogin=passhider.decrypt(FTPLoginH)
+        FTPPass=passhider.decrypt(FTPPassH)
+    else:
+        FTPLogin=FTPLoginH #Логин и пароль храним в открытом виде
+        FTPPass=FTPPassH
+
     FTPMethod=int(params[6])
     SigFilePath=params[7]
     SigText=params[8]
@@ -233,11 +241,16 @@ def processline(params):
     #TODO в будущем добавить возможность выполнения скрипта/программы по результатам выполнения задания
 
 def initial():
+    global usehideloginpass
+    global passhider
     global pathtoscript
     global conffilepath
     global confproxyfilepath
     global log
 
+    usehideloginpass=1
+
+    passhider=JpassHider()
     log=Jlog()
     log.setmaxfilesizeMB(5)
     log.setneedprinttext(True)
@@ -276,8 +289,15 @@ def initial():
             proxyType=proxyparams[0]
             proxyHost=proxyparams[1]
             proxyPort=proxyparams[2]
-            proxyLogin=proxyparams[3] # Логин и пароль пока храним в открытом виде,
-            proxyPass=proxyparams[4] #TODO добавить шифрование для хранения паролей
+            proxyLoginH=proxyparams[3]
+            proxyPassH=proxyparams[4]
+            if usehideloginpass==1:
+                proxyLogin=passhider.decrypt(proxyLoginH)
+                proxyPass=passhider.decrypt(proxyPassH)
+            else:
+                proxyLogin=proxyLoginH # Логин и пароль храним в открытом виде
+                proxyPass=proxyPassH
+
             if proxyType.lower()=='http':
                 sockproxyType=socks.PROXY_TYPE_HTTP
             elif proxyType.lower()=='sock5':
