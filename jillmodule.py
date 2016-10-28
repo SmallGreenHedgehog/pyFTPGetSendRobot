@@ -48,7 +48,7 @@ class JpassHider:
             while not(i<0): #Читаем фразу в обратную сторону и преобразовываем
                 code=ord(passwd[i])
                 newcode=4*code**2-20*code+25
-                delimcode=34
+                delimcode=31
                 codepasswd+=str(newcode)+str(delimcode)
                 i-=1
 
@@ -76,7 +76,7 @@ class JpassHider:
         strsym=''
         i=0
         while i<lenthcodepasswd:
-            if codepasswd[i:i+2]=='34':
+            if codepasswd[i:i+2]=='31':
                 arraypasswd.append(int(strsym))
                 strsym=''
                 i+=1
