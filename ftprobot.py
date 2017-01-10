@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-import os
+import os, platform
 import ftplib
 import socks, socket
 from jillmodule import Jlog
@@ -89,7 +89,7 @@ def sendfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
             else:
                 for i in range(0, countfiles):
                     curfile = files[i]
-                    curfullfile = localDir + '\\' + curfile
+                    curfullfile = localDir + slash + curfile
                     log.message('Отправляем "' + str(curfullfile) + '"')
                     sendfileFTP = open(curfullfile, 'rb')
                     try:
@@ -174,7 +174,7 @@ def getfiles(localDir, FTPHost, FTPPort, FTPDir, FTPLogin, FTPPass):
                     for i in range(0, countfiles):
                         success = 1
                         curfile = remotefiles[i]
-                        curfullfile = localDir + '\\' + curfile
+                        curfullfile = localDir + slash + curfile
                         log.message('Получаем "' + str(curfile) + '" в "' + curfullfile + '"')
                         getfileFTP = open(curfullfile, 'wb')
                         try:
@@ -245,7 +245,7 @@ def processline(params):
             log.message('+++++++++++++++++++++++++')
             log.message('Генерация сигнального файла.')
             if SigFilePath == '':
-                SigFilePath = pathtoscript + '\mes.sig'
+                SigFilePath = pathtoscript + slash + 'mes.sig'
             succes = 1
             try:
                 sigfile = open(SigFilePath, 'a')
@@ -269,6 +269,16 @@ def initial():
     global conffilepath
     global confproxyfilepath
     global log
+    global osname
+    global slash
+
+    osname=platform.system()
+    if osname=='Windows':
+        slash='\\'
+    else:
+        slash='/'
+
+    print(slash)
 
     usehideloginpass = 1
 
@@ -283,8 +293,8 @@ def initial():
     log.message('START SCRIPT')
     succes = 1
     pathtoscript = os.getcwd()
-    conffilepath = pathtoscript + '\config.cfg'
-    confproxyfilepath = pathtoscript + '\proxy.cfg'
+    conffilepath = pathtoscript + slash + 'config.cfg'
+    confproxyfilepath = pathtoscript + slash + 'proxy.cfg'
 
     if not (os.path.exists(conffilepath)):  # Проверяем наличие основного конфига
         succes = 0
